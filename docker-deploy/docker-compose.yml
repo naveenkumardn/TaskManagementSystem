@@ -1,0 +1,54 @@
+services:
+  # PostgreSQL service removed - using Supabase instead
+  # To use local PostgreSQL, uncomment the postgres service above and update DATABASE_URL
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: task-manager-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Supabase Database Connection - Transaction Pooler (port 6543)
+      # IMPORTANT: Use transaction pooler (port 6543) not direct connection (port 5432)
+      # Direct connection (port 5432) is blocked by Supabase unless IP is allowlisted
+      # Transaction pooler URL format: postgresql://postgres.PROJECT_REF:[PASSWORD]@REGION.pooler.supabase.com:6543/postgres
+      # Password is URL-encoded: ! becomes %21
+      - DATABASE_URL=postgresql://postgres.hpbjvghtvnjqfzrgjwrt:Naveenkumar1698%21@aws-1-ap-south-1.pooler.supabase.com:6543/postgres
+      # Supabase API Key (for future API calls if needed)
+      - SUPABASE_URL=https://hpbjvghtvnjqfzrgjwrt.supabase.co
+      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwYmp2Z2h0dm5qcWZ6cmdqd3J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NDMzNDQsImV4cCI6MjA4NDIxOTM0NH0.cxlVIHT50wgOQ0749qHxXDqw_e2v2ri1Fwskg-EV9bc
+    # Removed depends_on: postgres (no longer needed with Supabase)
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - task-manager-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=
+    container_name: task-manager-frontend
+    ports:
+      - "3002:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - task-manager-network
+
+networks:
+  task-manager-network:
+    driver: bridge
+
+# volumes:
+  # postgres_data:  # No longer needed - using Supabase
+
